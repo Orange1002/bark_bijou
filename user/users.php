@@ -21,10 +21,10 @@ if (isset($_GET["q"])) {
             $orderClause = "ORDER BY id DESC";
             break;
         case 3:
-            $orderClause = "ORDER BY account ASC";
+            $orderClause = "ORDER BY name ASC";
             break;
         case 4:
-            $orderClause = "ORDER BY account DESC";
+            $orderClause = "ORDER BY name DESC";
             break;
     }
 
@@ -55,18 +55,8 @@ if (isset($_GET["q"])) {
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="">
-    <!-- Custom fonts for this template-->
-    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
-    <link
-        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
-        rel="stylesheet">
-
-    <!-- Custom styles for this template-->
-    <link href="../sb-admin-2.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
-        integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
     <?php include("../css.php") ?>
+
     <style>
         .primary {
             background-color: rgba(245, 160, 23, 0.919);
@@ -74,7 +64,7 @@ if (isset($_GET["q"])) {
 
         .list-btn a {
             background-color: transparent;
-            color: rgb(215, 172, 41);
+            color: #ffc107;
             border-color: transparent;
         }
 
@@ -83,12 +73,12 @@ if (isset($_GET["q"])) {
         }
 
         .list-btn a:active {
-            color: #b8860b;
+            color: rgb(219, 161, 16);
             background-color: transparent;
         }
 
         .list-btn a.active {
-            color: #b8860b;
+            color: rgb(219, 161, 16);
             background-color: transparent;
         }
 
@@ -96,6 +86,31 @@ if (isset($_GET["q"])) {
             border: none;
             box-shadow: none;
             outline: none;
+        }
+
+        .pagination .page-link {
+            background-color: #ffc107;
+            /* Bootstrap warning 黃色 */
+            color: white;
+            /* 文字顏色 */
+            border-color: #ffc107;
+            /* 邊框顏色 */
+        }
+
+        .pagination .page-link:hover {
+            background-color: #ffca2c;
+            /* 滑鼠懸停時的顏色 */
+            border-color: #ffc720;
+        }
+
+        .pagination .page-link:focus {
+            box-shadow: rgb(217, 164, 6);
+            /* 發光效果 */
+        }
+
+        .pagination .active .page-link {
+            background-color: rgb(219, 161, 16);
+            border-color:rgb(219, 161, 16);
         }
     </style>
 </head>
@@ -177,7 +192,7 @@ if (isset($_GET["q"])) {
                                             placeholder="Search for..." aria-label="Search"
                                             aria-describedby="basic-addon2">
                                         <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button">
+                                            <button class="btn btn-warning" type="button">
                                                 <i class="fas fa-search fa-sm"></i>
                                             </button>
                                         </div>
@@ -223,14 +238,19 @@ if (isset($_GET["q"])) {
                 <!-- Begin Page Content -->
                 <div class="container-fluid">
                     <!-- Page Heading -->
-                    <h1 class="h3 mb-0 text-gray-800">會員管理</h1>
+                    <div class="d-flex justify-content-between mb-2">
+                        <h1 class="h3 mb-0 text-gray-800">會員管理</h1>
+                        <div class="py-2">
+                            <a class="btn btn-warning d-flex align-items-center" href="create-user.php"><i class="fa-solid fa-user-plus fa-fw"></i>Add User</a>
+                        </div>
+                    </div>
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <div class="container">
+                        <div class="container-fluid">
                             <div class="py-2 row g-3 align-items-center">
                                 <div class="col-md-6">
                                     <div class="hstack gap-2 align-item-center">
                                         <?php if (isset($_GET["q"])) : ?>
-                                            <a class="btn btn-primary" href="users.php"><i class="fa-solid fa-arrow-left fa-fw"></i></a>
+                                            <a class="btn btn-warning" href="users.php"><i class="fa-solid fa-arrow-left fa-fw"></i></a>
                                         <?php endif; ?>
                                         <div>共 <?= $userCount ?> 位使用者</div>
                                     </div>
@@ -246,48 +266,56 @@ if (isset($_GET["q"])) {
                                                                                                 // $_GET["q"] : "";
                                                                                                 $q = $_GET["q"] ?? ""; ?>
                                                 value="<?= $q ?>">
-                                            <button class="btn btn-primary"><i class="fa-solid fa-magnifying-glass fa-fw" type="submit"></i></button>
+                                            <button class="btn btn-warning"><i class="fa-solid fa-magnifying-glass fa-fw" type="submit"></i></button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
-                            <div class="py-2 text-end">
-                                <div class="btn-group">
-                                    <a href="users.php?p=<?= $p ?>&order=3" class="btn btn-primary <?php if ($order == 3) echo "active" ?>"><i class="fa-solid fa-arrow-down-a-z fa-fw"></i></a>
-                                    <a href="users.php?p=<?= $p ?>&order=4" class="btn btn-primary <?php if ($order == 4) echo "active" ?>"><i class="fa-solid fa-arrow-down-z-a fa-fw"></i></a>
-                                </div>
-                            </div>
                             <?php if ($userCount > 0): ?>
-
                                 <table class="table table-bordered">
                                     <thead>
                                         <tr>
-                                            <th class="row g-0 align-middle">
-                                                <div class="d-flex align-items-center col-9">
-                                                    id
-                                                </div>
-                                                <div class="col-3 list-btn">
-                                                    <a href="users.php?p=<?= $p ?>&order=1" class="d-flex btn btn-sm p-0 <?php if ($order == 1) echo "active" ?>"><i class="fa-solid fa-caret-up "></i></a>
-                                                    <a href="users.php?p=<?= $p ?>&order=2" class="d-flex btn btn-sm p-0 m-0 <?php if ($order == 2) echo "active" ?>"><i class="fa-solid fa-caret-down "></i></a>
+                                            <th class="align-middle">
+                                                <div class="row g-0">
+                                                    <div class="d-flex align-items-center col-9">
+                                                        id
+                                                    </div>
+                                                    <div class="col-3 list-btn">
+                                                        <a href="users.php?p=<?= $p ?>&order=1" class="d-flex btn p-0 <?php if ($order == 1) echo "active" ?>"><i class="fa-solid fa-caret-up "></i></a>
+                                                        <a href="users.php?p=<?= $p ?>&order=2" class="d-flex btn p-0 m-0 <?php if ($order == 2) echo "active" ?>"><i class="fa-solid fa-caret-down "></i></a>
+                                                    </div>
                                                 </div>
                                             </th>
-                                            <th class="align-middle">account</th>
-                                            <th class="align-middle">name</th>
+                                            <th class="align-middle">
+                                                <div class="row g-0">
+                                                    <div class="d-flex align-items-center col-9">
+                                                        name
+                                                    </div>
+                                                    <div class="col-3 list-btn">
+                                                        <a href="users.php?p=<?= $p ?>&order=3" class="d-flex btn p-0 <?php if ($order == 3) echo "active" ?>"><i class="fa-solid fa-caret-up "></i></a>
+                                                        <a href="users.php?p=<?= $p ?>&order=4" class="d-flex btn p-0 m-0 <?php if ($order == 4) echo "active" ?>"><i class="fa-solid fa-caret-down "></i></a>
+                                                    </div>
+                                                </div>
+                                            </th>
+                                            <th class="align-middle">
+                                                account
+                                            </th>
                                             <th class="align-middle">phone</th>
                                             <th class="align-middle">email</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($rows as $row): ?>
                                             <tr>
                                                 <td class="align-middle"><?= $row["id"] ?></td>
-                                                <td class="align-middle"><?= $row["account"] ?></td>
                                                 <td class="align-middle"><?= $row["name"] ?></td>
+                                                <td class="align-middle"><?= $row["account"] ?></td> 
                                                 <td class="align-middle"><?= $row["phone"] ?></td>
                                                 <td class="align-middle"><?= $row["email"] ?></td>
                                                 <td class="align-middle">
-                                                    <a class="btn btn-primary" href="user.php?id=<?= $row["id"] ?>"><i class="fa-regular fa-eye"></i></a>
-                                                    <a class="btn btn-primary" href="user-edit.php?id=<?= $row["id"] ?>"><i class="fa-solid fa-fw fa-pen"></i></a>
+                                                    <a class="btn btn-warning" href="user.php?id=<?= $row["id"] ?>"><i class="fa-regular fa-eye"></i></a>
+                                                    <a class="btn btn-warning" href="user-edit.php?id=<?= $row["id"] ?>"><i class="fa-solid fa-fw fa-pen"></i></a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
