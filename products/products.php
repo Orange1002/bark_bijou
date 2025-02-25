@@ -3,35 +3,43 @@
 require_once("../pdo_connect_bark_bijou.php");
 
 $items_per_page = 8;
-
 $current_page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
-
 $offset = ($current_page - 1) * $items_per_page;
 
 $search = $_GET["search"] ?? "";
+$category_id = $_GET["category_id"] ?? "";
 
-$count_stmt = $db_host->prepare("SELECT COUNT(*) FROM products WHERE valid = 1 AND product_name LIKE :search");
-$count_stmt->execute([':search' => "%$search%"]);
+$categories_stmt = $db_host->prepare("SELECT * FROM product_categories");
+$categories_stmt->execute();
+$categories = $categories_stmt->fetchAll();
+
+$sql = "SELECT products.*, 
+       COALESCE((SELECT img_url FROM product_images WHERE product_images.product_id = products.id LIMIT 1), 'uploads/default.png') AS img_url
+    FROM products 
+    WHERE products.valid = 1 AND products.product_name LIKE :search";
+$params = [":search" => "%$search%"];
+
+if (!empty($category_id)) {
+    $sql .= " AND products.category_id = :category_id";
+    $params[":category_id"] = $category_id;
+}
+
+$count_stmt = $db_host->prepare("SELECT COUNT(*) FROM products WHERE valid = 1 AND product_name LIKE :search" . (!empty($category_id) ? " AND category_id = :category_id" : ""));
+$count_stmt->execute($params);
 $total_items = $count_stmt->fetchColumn();
 
 $total_pages = ceil($total_items / $items_per_page);
 
-$stmt = $db_host->prepare("
-    SELECT products.*, 
-           COALESCE((SELECT img_url FROM product_images WHERE product_images.product_id = products.id LIMIT 1), 'uploads/default.png') AS img_url
-    FROM products
-    WHERE products.valid = 1 AND products.product_name LIKE :search
-    LIMIT :limit OFFSET :offset
-");
+$sql .= " LIMIT :limit OFFSET :offset";
+$params[":limit"] = $items_per_page;
+$params[":offset"] = $offset;
 
-// limit與offset須為整數，須使用bindValue
-$stmt->bindValue(':search', "%$search%", PDO::PARAM_STR);
-$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
+$stmt = $db_host->prepare($sql);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+}
 $stmt->execute();
 $products = $stmt->fetchAll();
-
 ?>
 
 <!DOCTYPE html>
@@ -189,12 +197,20 @@ $products = $stmt->fetchAll();
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
                         <h1 class="h3 mb-0 text-gray-800">商品列表</h1>
-                        <!-- 搜尋 -->
+                        <!-- 搜尋 + 類別篩選 -->
                         <form method="GET" action="products.php" class="d-flex">
+                            <select name="category_id" class="form-select me-3" onchange="this.form.submit()">
+                                <option value="">所有類別</option>
+                                <?php foreach ($categories as $category): ?>
+                                    <option value="<?= $category["category_id"] ?>" <?= ($category_id == $category["category_id"]) ? "selected" : "" ?>>
+                                        <?= htmlspecialchars($category["category_name"]) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                             <?php if (!empty($_GET["search"])): ?>
                                 <a class="btn btn-outline-primary mr-2" href="products.php"><i class="fa-solid fa-arrow-left"></i></a>
                             <?php endif; ?>
-                            <input type="text" name="search" class="form-control me-2" placeholder="搜尋商品..." value="<?= $search ?>">
+                            <input type="text" name="search" class="form-control me-2" placeholder="搜尋商品..." value="<?= htmlspecialchars($search) ?>">
                             <button type="submit" class="btn btn-outline-primary"><i class="fa-solid fa-search"></i></button>
                         </form>
                     </div>
