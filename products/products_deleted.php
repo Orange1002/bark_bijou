@@ -2,35 +2,19 @@
 
 require_once("../pdo_connect_bark_bijou.php");
 
-$items_per_page = 8;
-
-$current_page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
-
-$offset = ($current_page - 1) * $items_per_page;
-
-$search = $_GET["search"] ?? "";
-
-$count_stmt = $db_host->prepare("SELECT COUNT(*) FROM products WHERE valid = 1 AND product_name LIKE :search");
-$count_stmt->execute([':search' => "%$search%"]);
-$total_items = $count_stmt->fetchColumn();
-
-$total_pages = ceil($total_items / $items_per_page);
-
-$stmt = $db_host->prepare("
-    SELECT products.*, 
-           COALESCE((SELECT img_url FROM product_images WHERE product_images.product_id = products.id LIMIT 1), 'uploads/default.png') AS img_url
-    FROM products
-    WHERE products.valid = 1 AND products.product_name LIKE :search
-    LIMIT :limit OFFSET :offset
-");
-
-// limit與offset須為整數，須使用bindValue
-$stmt->bindValue(':search', "%$search%", PDO::PARAM_STR);
-$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-$stmt->execute();
-$products = $stmt->fetchAll();
+try {
+    $stmt = $db_host->prepare("SELECT products.*, 
+       COALESCE((SELECT img_url 
+                 FROM product_images 
+                 WHERE product_images.product_id = products.id 
+                 LIMIT 1), 'uploads/default.png') AS img_url
+FROM products
+WHERE products.valid = 0");
+    $stmt->execute();
+    $products = $stmt->fetchAll();
+} catch (PDOException $e) {
+    echo json_encode(["error" => $e->getMessage()]);
+}
 
 ?>
 
@@ -189,80 +173,48 @@ $products = $stmt->fetchAll();
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
                         <h1 class="h3 mb-0 text-gray-800">商品列表</h1>
-                        <!-- 搜尋 -->
-                        <form method="GET" action="products.php" class="d-flex">
-                            <?php if (!empty($_GET["search"])): ?>
-                                <a class="btn btn-outline-primary mr-2" href="products.php"><i class="fa-solid fa-arrow-left"></i></a>
-                            <?php endif; ?>
-                            <input type="text" name="search" class="form-control me-2" placeholder="搜尋商品..." value="<?= $search ?>">
-                            <button type="submit" class="btn btn-outline-primary"><i class="fa-solid fa-search"></i></button>
-                        </form>
                     </div>
-
                     <div class="py-2">
-                        <a class="btn btn-primary" href="index.php"><i class="fa-solid fa-arrow-left fa-fw"></i> 回首頁</a>
-                        <a class="btn btn-success float-end" href="create_product.php"><i class="fa-solid fa-plus fa-fw"></i> 新增商品</a>
-                    </div>
-                    <?php if (count($products) > 0): ?>
-                        <table class="table table-bordered table-striped mt-3">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>圖片</th>
-                                    <th>商品名稱</th>
-                                    <th>價格 (TWD)</th>
-                                    <th>庫存</th>
-                                    <th>狀態</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($products as $product): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($product["id"]) ?></td>
-                                        <td><img src="<?= htmlspecialchars($product['img_url']) ?>"
-                                                alt="商品圖片" class="img-thumbnail" style="width: 50px; height: 50px;"></td>
-                                        <td><?= htmlspecialchars($product["product_name"]) ?></td>
-                                        <td><?= number_format($product["price"]) ?> TWD</td>
-                                        <td><?= $product["stock"] ?></td>
-                                        <td>
-                                            <?php if ($product["status"] === 'active'): ?>
-                                                <span class="badge bg-success">上架中</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary">已下架</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <a href="product_edit.php?id=<?= $product["id"] ?>" class="btn btn-primary btn-sm">
-                                                <i class="fa-solid fa-pen fa-fw"></i> 編輯
-                                            </a>
-                                            <a href="product_delete.php?id=<?= $product["id"] ?>" class="btn btn-danger btn-sm" onclick="return confirm('確定要刪除這個商品嗎？');">
-                                                <i class="fa-solid fa-trash fa-fw"></i> 刪除
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+            <a class="btn btn-primary" href="products.php"><i class="fa-solid fa-arrow-left fa-fw"></i> 返回商品列表</a>
+        </div>
 
-                        <!-- 分頁 -->
-                        <?php if ($total_pages > 1): ?>
-                            <nav>
-                                <ul class="pagination justify-content-center mt-3">
-                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                        <li class="page-item <?= ($current_page == $i) ? 'active' : '' ?>">
-                                            <a class="page-link" href="?search=<?= urlencode($search) ?>&page=<?= $i ?>"><?= $i ?></a>
-                                        </li>
-                                    <?php endfor; ?>
-                                </ul>
-                            </nav>
-                        <?php endif; ?>
-                        <a href="products_deleted.php" class="btn btn-warning mb-2 float-end">
-                            <i class="fa-solid fa-trash fa-fw"></i> 回收站
-                        </a>
-                    <?php else: ?>
-                        <div class="alert alert-warning">目前沒有商品。</div>
-                    <?php endif; ?>
+        <h2 class="mt-3">回收站（已刪除商品）</h2>
+
+        <?php if (count($products) > 0): ?>
+            <table class="table table-bordered table-striped mt-3 text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>圖片</th>
+                        <th>商品名稱</th>
+                        <th>價格 (TWD)</th>
+                        <th>庫存</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($products as $product): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($product["id"]) ?></td>
+                            <td>
+                                <img src="<?= htmlspecialchars($product['img_url']) ?>" 
+                                     alt="商品圖片" class="img-thumbnail" style="width: 50px; height: 50px;">
+                            </td>
+                            <td><?= htmlspecialchars($product["product_name"]) ?></td>
+                            <td><?= number_format($product["price"]) ?> TWD</td>
+                            <td><?= $product["stock"] ?></td>
+                            <td>
+                                <a href="product_recover.php?id=<?= $product["id"] ?>" class="btn btn-success btn-sm">
+                                    <i class="fa-solid fa-undo fa-fw"></i> 還原
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <div class="alert alert-warning">回收站內沒有商品。</div>
+        <?php endif; ?>
                 </div>
                 <!-- End of Page Wrapper -->
             </div>

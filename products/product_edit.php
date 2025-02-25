@@ -1,37 +1,25 @@
 <?php
-
 require_once("../pdo_connect_bark_bijou.php");
 
-$items_per_page = 8;
 
-$current_page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+$product_id = $_GET['id'] ?? null;
 
-$offset = ($current_page - 1) * $items_per_page;
+if (!$product_id) {
+    die("❌ 錯誤：缺少商品 ID");
+}
 
-$search = $_GET["search"] ?? "";
 
-$count_stmt = $db_host->prepare("SELECT COUNT(*) FROM products WHERE valid = 1 AND product_name LIKE :search");
-$count_stmt->execute([':search' => "%$search%"]);
-$total_items = $count_stmt->fetchColumn();
+$stmt = $db_host->prepare("SELECT * FROM products WHERE id = :id");
+$stmt->execute([':id' => $product_id]);
+$product = $stmt->fetch();
 
-$total_pages = ceil($total_items / $items_per_page);
+$stmt = $db_host->prepare("SELECT img_url FROM product_images WHERE product_id = :id LIMIT 1");
+$stmt->execute([':id' => $product_id]);
+$image = $stmt->fetch();
+$product_image = $image['img_url'] ?? 'uploads/default.png';
 
-$stmt = $db_host->prepare("
-    SELECT products.*, 
-           COALESCE((SELECT img_url FROM product_images WHERE product_images.product_id = products.id LIMIT 1), 'uploads/default.png') AS img_url
-    FROM products
-    WHERE products.valid = 1 AND products.product_name LIKE :search
-    LIMIT :limit OFFSET :offset
-");
-
-// limit與offset須為整數，須使用bindValue
-$stmt->bindValue(':search', "%$search%", PDO::PARAM_STR);
-$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-$stmt->execute();
-$products = $stmt->fetchAll();
-
+$vendors = $db_host->query("SELECT * FROM vendors")->fetchAll();
+$categories = $db_host->query("SELECT * FROM product_categories")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -188,81 +176,71 @@ $products = $stmt->fetchAll();
                 <div class="container-fluid">
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">商品列表</h1>
-                        <!-- 搜尋 -->
-                        <form method="GET" action="products.php" class="d-flex">
-                            <?php if (!empty($_GET["search"])): ?>
-                                <a class="btn btn-outline-primary mr-2" href="products.php"><i class="fa-solid fa-arrow-left"></i></a>
-                            <?php endif; ?>
-                            <input type="text" name="search" class="form-control me-2" placeholder="搜尋商品..." value="<?= $search ?>">
-                            <button type="submit" class="btn btn-outline-primary"><i class="fa-solid fa-search"></i></button>
-                        </form>
+                        <h1 class="h3 mb-0 text-gray-800">商品編輯</h1>
                     </div>
-
                     <div class="py-2">
-                        <a class="btn btn-primary" href="index.php"><i class="fa-solid fa-arrow-left fa-fw"></i> 回首頁</a>
-                        <a class="btn btn-success float-end" href="create_product.php"><i class="fa-solid fa-plus fa-fw"></i> 新增商品</a>
+                        <a class="btn btn-primary" href="products.php"><i class="fa-solid fa-arrow-left fa-fw"></i> 返回商品列表</a>
                     </div>
-                    <?php if (count($products) > 0): ?>
-                        <table class="table table-bordered table-striped mt-3">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>圖片</th>
-                                    <th>商品名稱</th>
-                                    <th>價格 (TWD)</th>
-                                    <th>庫存</th>
-                                    <th>狀態</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($products as $product): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($product["id"]) ?></td>
-                                        <td><img src="<?= htmlspecialchars($product['img_url']) ?>"
-                                                alt="商品圖片" class="img-thumbnail" style="width: 50px; height: 50px;"></td>
-                                        <td><?= htmlspecialchars($product["product_name"]) ?></td>
-                                        <td><?= number_format($product["price"]) ?> TWD</td>
-                                        <td><?= $product["stock"] ?></td>
-                                        <td>
-                                            <?php if ($product["status"] === 'active'): ?>
-                                                <span class="badge bg-success">上架中</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary">已下架</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <a href="product_edit.php?id=<?= $product["id"] ?>" class="btn btn-primary btn-sm">
-                                                <i class="fa-solid fa-pen fa-fw"></i> 編輯
-                                            </a>
-                                            <a href="product_delete.php?id=<?= $product["id"] ?>" class="btn btn-danger btn-sm" onclick="return confirm('確定要刪除這個商品嗎？');">
-                                                <i class="fa-solid fa-trash fa-fw"></i> 刪除
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <form action="process_edit_product.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="product_id" value="<?= htmlspecialchars($product["id"]) ?>">
 
-                        <!-- 分頁 -->
-                        <?php if ($total_pages > 1): ?>
-                            <nav>
-                                <ul class="pagination justify-content-center mt-3">
-                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                        <li class="page-item <?= ($current_page == $i) ? 'active' : '' ?>">
-                                            <a class="page-link" href="?search=<?= urlencode($search) ?>&page=<?= $i ?>"><?= $i ?></a>
-                                        </li>
-                                    <?php endfor; ?>
-                                </ul>
-                            </nav>
-                        <?php endif; ?>
-                        <a href="products_deleted.php" class="btn btn-warning mb-2 float-end">
-                            <i class="fa-solid fa-trash fa-fw"></i> 回收站
-                        </a>
-                    <?php else: ?>
-                        <div class="alert alert-warning">目前沒有商品。</div>
-                    <?php endif; ?>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">目前商品圖片</label>
+                                <div class="mb-3">
+                                    <img id="imagePreview" src="<?= htmlspecialchars($product_image) ?>" class="img-fluid border">
+                                </div>
+                                <label class="form-label">更換圖片（選填）</label>
+                                <input type="file" class="form-control" id="product_image" name="product_image" accept="image/*" onchange="previewImage(event)">
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="product_name" class="form-label">商品名稱</label>
+                                    <input type="text" class="form-control" id="product_name" name="product_name" value="<?= htmlspecialchars($product["product_name"]) ?>" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="vendor_id" class="form-label">供應商</label>
+                                    <select class="form-control" id="vendor_id" name="vendor_id" required>
+                                        <?php foreach ($vendors as $vendor): ?>
+                                            <option value="<?= $vendor['vendor_id'] ?>" <?= $vendor['vendor_id'] == $product["vendor_id"] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($vendor['vendor_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="category_id" class="form-label">產品分類</label>
+                                    <select class="form-control" id="category_id" name="category_id" required>
+                                        <?php foreach ($categories as $category): ?>
+                                            <option value="<?= $category['category_id'] ?>" <?= $category['category_id'] == $product["category_id"] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($category['category_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">價格 (TWD)</label>
+                                    <input type="number" class="form-control" id="price" name="price" value="<?= $product["price"] ?>" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="stock" class="form-label">庫存</label>
+                                    <input type="number" class="form-control" id="stock" name="stock" value="<?= $product["stock"] ?>" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">商品描述</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3"><?= htmlspecialchars($product["description"]) ?></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-success"><i class="fa-solid fa-save fa-fw"></i> 更新商品</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
                 <!-- End of Page Wrapper -->
             </div>
