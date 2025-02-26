@@ -1,43 +1,5 @@
 <?php
-
-require_once("../db_connect_bark_bijou.php");
-
-$sqlAll = $sql = "SELECT * FROM course";
-$resultAll = $conn->query($sqlAll);
-$courseCount = $resultAll->num_rows;
-
-if (isset($_GET["q"])) {
-} else if (isset($_GET["p"]) && isset($_GET["order"])) {
-    $p = $_GET["p"];
-    $order = $_GET["order"];
-    $orderClause = "";
-    switch ($order) {
-        case 1:
-            $orderClause = "ORDER BY registration_start ASC";
-            break;
-        case 2:
-            $orderClause = "ORDER BY registration_start DESC";
-            break;
-        case 3:
-            $orderClause = "ORDER BY cost ASC";
-            break;
-        case 4:
-            $orderClause = "ORDER BY cost DESC";
-            break;
-    }
-    $perPage = 5;
-    $startItem = ($p - 1) * $perPage;
-    $totalPage = ceil($courseCount / $perPage);
-
-    $sql = "SELECT * FROM course $orderClause LIMIT $startItem,$perPage";
-} else {
-    header("location: course.php?p=1&order=2");
-    exit;
-}
-
-$result = $conn->query($sql);
-$rows = $result->fetch_all(MYSQLI_ASSOC);
-
+$today = date("Y-m-d");
 ?>
 
 <!DOCTYPE html>
@@ -51,7 +13,7 @@ $rows = $result->fetch_all(MYSQLI_ASSOC);
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Bark & Bijou</title>
+    <title>新增課程</title>
 
     <!-- Custom fonts for this template-->
     <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
@@ -70,6 +32,10 @@ $rows = $result->fetch_all(MYSQLI_ASSOC);
     <style>
         .box1 {
             height: 100px;
+        }
+
+        .px-12 {
+            padding-inline: 12px;
         }
     </style>
 
@@ -195,101 +161,99 @@ $rows = $result->fetch_all(MYSQLI_ASSOC);
                     </ul>
                 </nav>
                 <!-- End of Topbar -->
-                <!-- Begin Page Content -->
-                <div class="mx-4">
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h1 mb-0 text-gray-800 fw-bold">課程列表</h1>
-                        <a class="btn btn-orange" href="add_course.php">新增課程</a>
-                    </div>
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        總共<?= $courseCount ?>筆
-                        <div class="dropdown">
-                            <a class="btn btn-orange dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="dropdown">
-                                <?php
-                                switch ($order) {
-                                    case 1:
-                                        echo "按上架時間排序 ↓";
-                                        break;
-                                    case 2:
-                                        echo "按上架時間排序 ↑";
-                                        break;
-                                    case 3:
-                                        echo "按價格排序 ↓";
-                                        break;
-                                    case 4:
-                                        echo "按價格排序 ↑";
-                                        break;
-                                }
-                                ?>
-                            </a>
-                            <ul class="dropdown-menu btn-orange">
-                                <li><a class="dropdown-item" href="course.php?p=1&order=1">按上架時間排序 ↓</a></li>
-                                <li><a class="dropdown-item" href="course.php?p=1&order=2">按上架時間排序 ↑</a></li>
-                                <li><a class="dropdown-item" href="course.php?p=1&order=3">按價格排序 ↓</a></li>
-                                <li><a class="dropdown-item" href="course.php?p=1&order=4">按價格排序 ↑</a></li>
-                            </ul>
+                <div class="container mb-4 text-center">
+                    <h1 class="h1 mb-0 text-gray-800 fw-bold">新增課程</h1>
+                    <form action="doAddCourse.php" method="post" enctype="multipart/form-data">
+                        <div class="d-flex justify-content-center mt-3">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程名稱</label>
+                            <div class="col-6 bg-info d-flex align-items-center py-3">
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
                         </div>
-                    </div>
-                    <!-- courss-list -->
-                    <div>
-                        <table class="table table-striped">
-                            <thead>
-                                <tr class="text-center">
-                                    <th class="col-1">課程名稱</th>
-                                    <th class="col-4">課程內容</th>
-                                    <th class="col-1">課程縮圖</th>
-                                    <th class="col-1">課程金額</th>
-                                    <th class="col-1">課程方法</th>
-                                    <th class="col-1">課程教師</th>
-                                    <th class="col-1">上架時間</th>
-                                    <th class="col-1">狀態</th>
-                                    <th class="col-1">功能鈕</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $course): ?>
-                                    <tr class="box1 text-center">
-                                        <td class="align-middle"><?= $course["name"] ?></td>
-                                        <td class="align-middle"><?= $course["content"] ?></td>
-                                        <td><?= $course["img_id"] ?></td>
-                                        <td class="text-end align-middle">$<?= number_format($course["cost"]) ?></td>
-                                        <td class="align-middle"><?= $course["method_id"] ?></td>
-                                        <td class="align-middle"><?= $course["teacher_id"] ?></td>
-                                        <td class="text-start align-middle"><?= $course["registration_start"] ?></td>
-                                        <td class="align-middle">在架上</td>
-                                        <td>
-                                            <a class="btn btn-primary" href="course_content.php?id=<?= $course["id"] ?>"><i class="fa-solid fa-eye"></i></i></a>
-                                            <br>
-                                            <a class="btn btn-primary mt-2" href="course_edit.php?id=<?= $course["id"] ?>"><i class="fa-solid fa-pen-to-square fa-fw"></i></a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <?php if (isset($_GET["p"])): ?>
-                        <div>
-                            <nav aria-label="">
-                                <ul class="pagination">
-                                    <?php for ($i = 1; $i <= $totalPage; $i++): ?>
-                                        <?php
-                                        $active = ($i == $_GET["p"]) ? "active" : "";
-                                        ?>
-                                        <li class="page-item <?= $active ?>">
-                                            <a class="page-link" href="course.php?p=<?= $i ?>&order=<?= $order ?>"><?= $i ?></a>
-                                        </li>
-                                    <?php endfor; ?>
-                                </ul>
-                            </nav>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程內容</label>
+                            <div class="col-6 bg-primary d-flex align-items-center py-3">
+                                <textarea type="text" class="form-control" name="content" rows="10" required></textarea>
+                            </div>
                         </div>
-                    <?php endif; ?>
-                    <!-- End of Page Wrapper -->
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程照片</label>
+                            <div class="col-6 bg-info d-flex align-items-center py-3">
+                                <input type="file" class="form-control" name="image" accept=".jpg, .jpeg, .png" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程金額</label>
+                            <div class="col-6 bg-primary d-flex align-items-center py-3">
+                                <input type="number" class="form-control" name="cost" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程方法</label>
+                            <div class="col-6 bg-info d-flex align-items-center py-3">
+                                <input type="radio" name="method" value="1" required>線上
+                                <input type="radio" class="ms-3" name="method" value="2" required>線下
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程地點</label>
+                            <div class="col-6 bg-primary d-flex align-items-center py-3">
+                                <select name="location">
+                                    <option value="1">線上無地點</option>
+                                    <option value="2">地點1</option>
+                                    <option value="3">地點2</option>
+                                    <option value="4">地點3</option>
+                                    <option value="5">地點4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">教師資訊</label>
+                            <div class="col-6 p-0">
+                                <div class="bg-info d-flex align-items-center py-3 px-12">
+                                    <input type="text" class="form-control" name="teacher_name" placeholder="名稱" required>
+                                </div>
+                                <div class="bg-info d-flex align-items-center py-3 px-12">
+                                    <input type="tel" class="form-control" name="teacher_phone" placeholder="電話" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">報名日期</label>
+                            <div class="col-6 bg-primary d-flex align-items-center py-3">
+                                <input type="date" name="registration_start" required value="<?= $today ?>">
+                                <h4 class="mx-2 text-white">~</h4>
+                                <input type="date" name="registration_end" required value="<?= $today ?>">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center">課程日期</label>
+                            <div class="col-6 bg-info d-flex align-items-center py-3">
+                                <input type="date" name="course_start" required value="<?= $today ?>">
+                                <h4 class="mx-2 text-white">~</h4>
+                                <input type="date" name="course_end" required value="<?= $today ?>">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center justify-content-center">優惠卷</label>
+                            <div class="col-6 bg-primary d-flex align-items-center py-3">
+
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <label for="" class="form-label col-1 bg-secondary text-white mb-0 h5 d-flex align-items-center justify-content-center">結束編輯</label>
+                            <div class="col-6 bg-info d-flex align-items-center justify-content-between py-3">
+                                <a href="course.php" class="btn btn-danger">放棄新增</a>
+                                <button class="btn btn-orange" type="submit">上傳課程</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <!-- Scroll to Top Button-->
+                <!-- Begin Page Content -->
+
             </div>
         </div>
-    </div>
 </body>
 
 
