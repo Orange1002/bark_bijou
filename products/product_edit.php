@@ -241,6 +241,24 @@ $categories = $db_host->query("SELECT * FROM product_categories")->fetchAll();
                             </div>
                         </div>
                     </form>
+                    <div class="float-end">
+                        <div>
+                            <form action="process_update_status.php" method="POST">
+                                <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+                                <button type="submit" name="status" value="<?= ($product['status'] === 'active') ? 'inactive' : 'active' ?>"
+                                    class="btn <?= ($product['status'] === 'active') ? 'btn-danger' : 'btn-success' ?> ">
+                                    <?= ($product['status'] === 'active') ? '🔴 下架商品' : '🟢 上架商品' ?>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="text-end">
+                            <?php if ($product["status"] === 'active'): ?>
+                                <span class="badge bg-success ">上架中</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary ">已下架</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
                 <!-- End of Page Wrapper -->
             </div>
