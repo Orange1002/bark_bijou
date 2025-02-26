@@ -2,12 +2,14 @@
     background-color: rgba(245, 160, 23, 0.919);
 }
 
-:root{
+:root {
     --orange: rgb(255, 115, 0);
     --white: #ffffff;
+    --height1: 300px;
 }
 
-.btn-orange{
+
+.btn-orange {
     color: var(--white);
     background: var(--orange);
 }
